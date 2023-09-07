@@ -27,6 +27,7 @@ namespace AirportProjectCore
             builder.Services.AddTransient<ICityService, CityService>();
             builder.Services.AddTransient<IStateService, StateService>();
             builder.Services.AddTransient<IFeedBackService, FeedBackService>();
+            builder.Services.AddTransient<IDistMethods,DistMethods>();
 
 
             var app = builder.Build();

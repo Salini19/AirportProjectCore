@@ -1,5 +1,6 @@
 ﻿using AirportProjectCore.Models;
 using AirportProjectCore.Services;
+using AirportProjectCore.Services.Implementation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Runtime;
@@ -12,13 +13,15 @@ namespace AirportProjectCore.Controllers
         private readonly IStateService _stateService;
         private readonly ICityService _cityService;
         private readonly IFeedBackService _feedBackService;
+        private readonly IDistMethods _distMethods;
 
-        public AirportController(IAirportService services1, ICityService services2, IFeedBackService services3, IStateService services4)
+        public AirportController(IAirportService services1, ICityService services2, IFeedBackService services3, IStateService services4, IDistMethods services)
         {
             _airportService = services1;
             _cityService = services2;
             _feedBackService = services3;
             _stateService = services4;
+            _distMethods = services;
         }
         public IActionResult Index()
         {
@@ -28,9 +31,9 @@ namespace AirportProjectCore.Controllers
         public IActionResult Create()
         {
             var cityList = _stateService.Get();
-            var selectList = new SelectList(cityList, "CITY", "CITY");
-            ViewBag.source = selectList;
-            ViewBag.destination = selectList;
+            //var selectList = new SelectList(cityList, "CITY", "CITY");
+            //ViewBag.source = selectList;
+            //ViewBag.destination = selectList;
             return View();
 
         }
@@ -39,11 +42,10 @@ namespace AirportProjectCore.Controllers
         {
             var cityList = _cityService.Get().AsEnumerable();
 
-
             string From =  Convert.ToString( form["source"]);
             CityInfo city1 = cityList.FirstOrDefault(m => m.City == From);
             var startlocation = new Location(city1.Lat, city1.Long);
-            string To = form["destination"].ToString();
+            string To = Convert.ToString(form["destination"]);
             CityInfo city2 = cityList.FirstOrDefault(m => m.City == To);
 
 
@@ -61,13 +63,13 @@ namespace AirportProjectCore.Controllers
 
                 //this is comment
 
-                var maxDistance = HaversineDistance(startlocation, destinationlocation) + 50;
+                var maxDistance = _distMethods.HaversineDistance(startlocation, destinationlocation) + 50;
                 foreach (var airport in airports)
                 {
                     var airportLocation = new Location(airport.Lat, airport.Long);
-                    var distance = CalculateDistance(startlocation, destinationlocation, airportLocation);
+                    var distance = _distMethods.CalculateDistance(startlocation, destinationlocation, airportLocation);
 
-                    var dist = HaversineDistance(startlocation, airportLocation);
+                    var dist = _distMethods.HaversineDistance(startlocation, airportLocation);
 
                     if (distance <= maxDistance)
                     {
@@ -85,10 +87,7 @@ namespace AirportProjectCore.Controllers
                 return View("AirportDisplay", airinrange);
             }
         }
-        public ActionResult About()
-        {
-            return View();
-        }
+      
 
         public ActionResult Contact()
         {
@@ -98,9 +97,9 @@ namespace AirportProjectCore.Controllers
         public ActionResult Contact(IFormCollection form)
         {
             FeedBack feed = new FeedBack();
-            feed.Name = form["Name"];
-            feed.Email = form["Email"];
-            feed.Subject = form["subject"];
+            feed.Name = Convert.ToString(form["Name"]);
+            feed.Email = Convert.ToString(form["Email"]);
+            feed.Subject = Convert.ToString(form["subject"]);
 
             if (string.IsNullOrEmpty(feed.Name) || string.IsNullOrEmpty(feed.Email) || string.IsNullOrEmpty(feed.Subject))
             {
@@ -124,25 +123,24 @@ namespace AirportProjectCore.Controllers
         public ActionResult Cost()
         {
             var airportlist = _airportService.Get();
-            ViewBag.From = new SelectList(airportlist, "AIRPORTNAME", "AIRPORTNAME");
-            ViewBag.To = new SelectList(airportlist, "AIRPORTNAME", "AIRPORTNAME");
+          
             return View();
         }
         [HttpPost]
         public ActionResult Cost(IFormCollection form)
         {
-            var airportlist = _airportService.Get();
+            var airportlist = _airportService.Get().AsEnumerable();
 
-            string From1 = form["From1"].ToString();
+            string From1 = Convert.ToString(form["From1"]);
 
-            AirportInfo airport1 = airportlist.Find(m => m.AirportName == From1);
+            AirportInfo airport1 = airportlist.FirstOrDefault(m => m.AirportName == From1);
             var start = new Location(airport1.Lat, airport1.Long);
-            string To1 = form["To1"].ToString();
-            AirportInfo airport2 = airportlist.Find(m => m.AirportName == To1);
+            string To1 = Convert.ToString(form["To1"]);
+            AirportInfo airport2 = airportlist.FirstOrDefault(m => m.AirportName == To1);
 
             var destination = new Location(airport2.Lat, airport2.Long);
 
-            var maxDistance = HaversineDistance(start, destination);
+            var maxDistance = _distMethods.HaversineDistance(start, destination);
             var rph = 14.54;
             double price = rph * maxDistance;
             price = Math.Round(price, 4);
@@ -171,9 +169,7 @@ namespace AirportProjectCore.Controllers
             }
             return View();
 
-
         }
-
         public ActionResult AirportList(string id)
         {
             var airports = _airportService.Get();
@@ -181,47 +177,14 @@ namespace AirportProjectCore.Controllers
             return View(list);
 
         }
-        public double CalculateDistance(Location startLocation, Location destinationLocation, Location airportLocation)
-        {
-            var startToAirportDistance = HaversineDistance(startLocation, airportLocation);
-            var airportToDestinationDistance = HaversineDistance(airportLocation, destinationLocation);
-            var totalDistance = startToAirportDistance + airportToDestinationDistance;
-
-            return totalDistance;
-        }
-
-        public double HaversineDistance(Location location1, Location location2)
-        {
-            var earthRadius = 6371; // Radius of the Earth in kilometers
-            var latitudeDifference = DegreesToRadians(location2.Latitude - location1.Latitude);
-            var longitudeDifference = DegreesToRadians(location2.Longitude - location1.Longitude);
-
-            var a = Math.Sin(latitudeDifference / 2) * Math.Sin(latitudeDifference / 2) +
-            Math.Cos(DegreesToRadians(location1.Latitude)) * Math.Cos(DegreesToRadians(location2.Latitude)) *
-            Math.Sin(longitudeDifference / 2) * Math.Sin(longitudeDifference / 2);
-
-            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            var distance = earthRadius * c;
-            return distance;
-        }
-
-
-
-        public double DegreesToRadians(double degrees)
-        {
-            return degrees * (Math.PI / 180);
-        }
-        public double RadiansToDegree(double degrees)
-        {
-            return degrees * (180 / Math.PI);
-        }
+     
         public ActionResult Services()
         {
             return View();
         }
-
-
-
-
+        public ActionResult About()
+        {
+            return View();
+        }
     }
 }
