@@ -21,7 +21,7 @@
     {
         public string Sname { get; set; }
     }
-    public class Airinfo
+    public class AirInfo
     {
         public string IataCode { get; set; }
         public string AirportName { get; set; }

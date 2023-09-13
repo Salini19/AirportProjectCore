@@ -1,7 +1,3 @@
-using AirportProjectCore.Models;
-using AirportProjectCore.Repository;
-using AirportProjectCore.Services;
-using AirportProjectCore.Services.Implementation;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirportProjectCore
@@ -13,22 +9,14 @@ namespace AirportProjectCore
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+
             builder.Services.AddControllersWithViews();
+
             var cons = builder.Configuration.GetSection("ConnectionStrings:DefaultConnection").Value;
             builder.Services.AddDbContext<DatabaseContext>(x => x.UseSqlServer(cons));
 
-            builder.Services.AddTransient<IRepository<AirportInfo>, Repository<AirportInfo>>();
-            builder.Services.AddTransient<IRepository<CityInfo>, Repository<CityInfo>>();
-            builder.Services.AddTransient<IRepository<FeedBack>, Repository<FeedBack>>();
-            builder.Services.AddTransient<IRepository<StateImg>, Repository<StateImg>>();
-
-
-            builder.Services.AddTransient<IAirportService, AirportServices>();
-            builder.Services.AddTransient<ICityService, CityService>();
-            builder.Services.AddTransient<IStateService, StateService>();
-            builder.Services.AddTransient<IFeedBackService, FeedBackService>();
-            builder.Services.AddTransient<IDistMethods,DistMethods>();
-
+            builder.Services.AddRepoServices()
+                .AddBusinessServies();
 
             var app = builder.Build();
 
